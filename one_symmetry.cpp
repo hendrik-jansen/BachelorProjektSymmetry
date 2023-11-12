@@ -229,6 +229,7 @@ static void parse(void)
   verbose("parsed %zu literals in %d clauses", literals, parsed);
 }
 
+// find candidate variables by checking whether their positive and negative occurences are the same
 void find_candidates()
 {
   for (int i = 1; i <= variables; i++)
@@ -240,12 +241,18 @@ void find_candidates()
   }
 }
 
+// check whether two clauses are identical, except for a given variable
+// which occures positivly in one clause and negativly in the other
 bool check_clause_symmetry(Clause *c1, Clause *c2, int var)
 {
   if (c1->size != c2->size)
   {
     return false;
   }
+
+  // go throug all literals of the first clause and check
+  // if they can be matched to a literal in the second clause
+  // or to its negation if the literal is of the given variable
   for (int i = 0; i < c1->size; i++)
   {
     bool found = false;
@@ -254,6 +261,8 @@ bool check_clause_symmetry(Clause *c1, Clause *c2, int var)
       if (c1->literals[i] == c2->literals[j] ||
           (c1->literals[i] == var && c2->literals[j] == -var))
       {
+        // after finding a matching literal, move it back
+        // so only unmatched literals have to be considered
         found = true;
         int tmp = c2->literals[i];
         c2->literals[i] = c2->literals[j];
@@ -269,8 +278,11 @@ bool check_clause_symmetry(Clause *c1, Clause *c2, int var)
   return true;
 }
 
+// check for a syntactic symmetry of a given variable with its negation
 bool check_symmetry(int var)
 {
+  // go through all clauses with a positive occurence of the given variable
+  // and check if there exists an otherwise identical clause with a negative occurence
   for (int i = 0; i < matrix[var].size(); i++)
   {
     bool found = false;
@@ -279,6 +291,8 @@ bool check_symmetry(int var)
       if (check_clause_symmetry(matrix[var].at(i), matrix[-var].at(j), var))
       {
         found = true;
+        // after finding a matching clause, move it back
+        // so only unmatched clauses have to be considered
         Clause *tmp = matrix[-var].at(i);
         matrix[-var].at(i) = matrix[-var].at(j);
         matrix[-var].at(j) = tmp;
