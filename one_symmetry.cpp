@@ -288,14 +288,14 @@ bool check_symmetry(int var)
     bool found = false;
     for (int j = i; j < matrix[-var].size(); j++)
     {
-      if (check_clause_symmetry(matrix[var].at(i), matrix[-var].at(j), var))
+      if (check_clause_symmetry(matrix[var][i], matrix[-var][j], var))
       {
         found = true;
         // after finding a matching clause, move it back
         // so only unmatched clauses have to be considered
-        Clause *tmp = matrix[-var].at(i);
-        matrix[-var].at(i) = matrix[-var].at(j);
-        matrix[-var].at(j) = tmp;
+        Clause *tmp = matrix[-var][i];
+        matrix[-var][i] = matrix[-var][j];
+        matrix[-var][j] = tmp;
         break;
       }
     }
