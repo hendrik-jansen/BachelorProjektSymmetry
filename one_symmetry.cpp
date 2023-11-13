@@ -250,6 +250,9 @@ bool check_clause_symmetry(Clause *c1, Clause *c2, int var)
     return false;
   }
 
+  auto c1_literals = c1->literals;
+  auto c2_literals = c2->literals;
+
   // go throug all literals of the first clause and check
   // if they can be matched to a literal in the second clause
   // or to its negation if the literal is of the given variable
@@ -258,15 +261,15 @@ bool check_clause_symmetry(Clause *c1, Clause *c2, int var)
     bool found = false;
     for (int j = i; j < c2->size; j++)
     {
-      if (c1->literals[i] == c2->literals[j] ||
-          (c1->literals[i] == var && c2->literals[j] == -var))
+      if (c1_literals[i] == c2_literals[j] ||
+          (c1_literals[i] == var && c2_literals[j] == -var))
       {
         // after finding a matching literal, move it back
         // so only unmatched literals have to be considered
         found = true;
-        int tmp = c2->literals[i];
-        c2->literals[i] = c2->literals[j];
-        c2->literals[j] = tmp;
+        int tmp = c2_literals[i];
+        c2_literals[i] = c2_literals[j];
+        c2_literals[j] = tmp;
         break;
       }
     }
@@ -281,21 +284,24 @@ bool check_clause_symmetry(Clause *c1, Clause *c2, int var)
 // check for a syntactic symmetry of a given variable with its negation
 bool check_symmetry(int var)
 {
+
+  auto &pos_occs = matrix[var];
+  auto &neg_occs = matrix[-var];
   // go through all clauses with a positive occurence of the given variable
   // and check if there exists an otherwise identical clause with a negative occurence
-  for (int i = 0; i < matrix[var].size(); i++)
+  for (int i = 0; i < pos_occs.size(); i++)
   {
     bool found = false;
-    for (int j = i; j < matrix[-var].size(); j++)
+    for (int j = i; j < neg_occs.size(); j++)
     {
-      if (check_clause_symmetry(matrix[var][i], matrix[-var][j], var))
+      if (check_clause_symmetry(pos_occs[i], neg_occs[j], var))
       {
         found = true;
         // after finding a matching clause, move it back
         // so only unmatched clauses have to be considered
-        Clause *tmp = matrix[-var][i];
-        matrix[-var][i] = matrix[-var][j];
-        matrix[-var][j] = tmp;
+        Clause *tmp = neg_occs[i];
+        neg_occs[i] = neg_occs[j];
+        neg_occs[j] = tmp;
         break;
       }
     }

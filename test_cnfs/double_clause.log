@@ -1,0 +1,3 @@
+c reading from './test_cnfs/double_clause.cnf'
+c parsed header 'p cnf 3 5'
+c found 0 candidates

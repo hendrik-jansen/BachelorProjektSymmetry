@@ -1,0 +1,5 @@
+c reading from './test_cnfs/symmetry2.cnf'
+c parsed header 'p cnf 3 4'
+c found 2 candidates
+c found symmetry on 1
+c found symmetry on 2
