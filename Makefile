@@ -1,6 +1,6 @@
 all: one_symmetry
 
-test: test.py
+test: test.py one_symmetry
 	python test.py
 
 one_symmetry: one_symmetry.cpp
