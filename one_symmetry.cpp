@@ -22,6 +22,12 @@ static int variables; // Variable range: 1,..,<variables>
 
 static size_t added; // Number of added clauses.
 
+static int sort_clauses = false; // sort clauses of canditates in matrix by size
+
+static int sort_literals = false; // sort literals in clauses of candidates
+
+static int clause_swapping = false; // use clause swapping in check_symmetries
+
 struct Clause
 {
 #ifndef NDEBUG
@@ -215,6 +221,8 @@ static void parse(void)
     }
     else
     {
+      // std::sort(clause.begin(), clause.end(), [](int i, int j)
+      //           { return abs(i) < abs(j); });
       add_clause(clause);
       clause.clear();
       parsed++;
@@ -229,22 +237,87 @@ static void parse(void)
   verbose("parsed %zu literals in %d clauses", literals, parsed);
 }
 
+void sort_candidate_clauses()
+{
+  for (auto can : candidates)
+  {
+    std::sort(matrix[can].begin(), matrix[can].end(), [](Clause *i, Clause *j)
+              { return i->size < j->size; });
+    std::sort(matrix[-can].begin(), matrix[-can].end(), [](Clause *i, Clause *j)
+              { return i->size < j->size; });
+  }
+}
+
+void sort_candidate_literals()
+{
+  for (auto can : candidates)
+  {
+    for (auto c : matrix[can])
+    {
+      std::sort(c->begin(), c->end(), [](int i, int j)
+                { return abs(i) < abs(j); });
+    }
+    for (auto c : matrix[-can])
+    {
+      std::sort(c->begin(), c->end(), [](int i, int j)
+                { return abs(i) < abs(j); });
+    }
+  }
+}
+
 // find candidate variables by checking whether their positive and negative occurences are the same
 void find_candidates()
 {
   for (int i = 1; i <= variables; i++)
   {
-    if (matrix[i].size() == matrix[-i].size())
+    if (matrix[i].size() != 0 && matrix[i].size() == matrix[-i].size())
     {
       candidates.push_back(i);
     }
   }
+  if (sort_clauses)
+  {
+    sort_candidate_clauses();
+  }
+  if (sort_literals)
+  {
+    sort_candidate_literals();
+  }
+}
+
+bool check_sorted_clause_symmetry(Clause *c1, Clause *c2, int var)
+{
+  if (c1->size != c2->size)
+  {
+    return false;
+  }
+
+  auto c1_literals = c1->literals;
+  auto c2_literals = c2->literals;
+
+  for (int i = 0; i < c1->size; i++)
+  {
+    if (c1_literals[i] == var and c2_literals[i] == -var)
+    {
+      continue;
+    }
+    else if (c1_literals[i] != c2_literals[i])
+    {
+      return false;
+    }
+  }
+  return true;
 }
 
 // check whether two clauses are identical, except for a given variable
 // which occures positivly in one clause and negativly in the other
 bool check_clause_symmetry(Clause *c1, Clause *c2, int var)
 {
+  if (sort_literals)
+  {
+    return check_sorted_clause_symmetry(c1, c2, var);
+  }
+
   if (c1->size != c2->size)
   {
     return false;
@@ -281,10 +354,8 @@ bool check_clause_symmetry(Clause *c1, Clause *c2, int var)
   return true;
 }
 
-// check for a syntactic symmetry of a given variable with its negation
-bool check_symmetry(int var)
+bool check_symmetry_swap(int var)
 {
-
   auto &pos_occs = matrix[var];
   auto &neg_occs = matrix[-var];
   // go through all clauses with a positive occurence of the given variable
@@ -313,13 +384,49 @@ bool check_symmetry(int var)
   return true;
 }
 
+// check for a syntactic symmetry of a given variable with its negation
+bool check_symmetry(int var)
+{
+  auto &pos_occs = matrix[var];
+  auto &neg_occs = matrix[-var];
+  // go through all clauses with a positive occurence of the given variable
+  // and check if there exists an otherwise identical clause with a negative occurence
+  for (auto c1 : pos_occs)
+  {
+    bool found = false;
+    for (auto c2 : neg_occs)
+    {
+      if (check_clause_symmetry(c1, c2, var))
+      {
+        found = true;
+        break;
+      }
+    }
+    if (!found)
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
 void find_symmetries()
 {
   for (auto var : candidates)
   {
-    if (check_symmetry(var))
+    if (clause_swapping)
     {
-      symmetries.push_back(var);
+      if (check_symmetry_swap(var))
+      {
+        symmetries.push_back(var);
+      }
+    }
+    else
+    {
+      if (check_symmetry(var) && check_symmetry(-var))
+      {
+        symmetries.push_back(var);
+      }
     }
   }
 }
@@ -356,6 +463,12 @@ int main(int argc, char **argv)
       verbosity = -1;
     else if (!strcmp(arg, "-v") || !strcmp(arg, "--verbose"))
       verbosity = 1;
+    else if (!strcmp(arg, "-c") || !strcmp(arg, "--sortclauses"))
+      sort_clauses = true;
+    else if (!strcmp(arg, "-l") || !strcmp(arg, "--sortliterals"))
+      sort_literals = true;
+    else if (!strcmp(arg, "-s") || !strcmp(arg, "--clauseswapping"))
+      clause_swapping = true;
     else if (arg[0] == '-')
       die("invalid option '%s' (try '-h')", arg);
     else if (file_name)
@@ -383,14 +496,11 @@ int main(int argc, char **argv)
 
   message("found %d candidates", candidates.size());
 
-  if (candidates.size() < 10000)
-  {
-    find_symmetries();
+  find_symmetries();
 
-    for (auto sym : symmetries)
-    {
-      message("found symmetry on %d", sym);
-    }
+  for (auto sym : symmetries)
+  {
+    message("found symmetry on %d", sym);
   }
 
   release();
