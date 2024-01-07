@@ -1,4 +1,4 @@
-all: one_symmetry two_symmetry
+all: one_symmetry
 
 test: test.py one_symmetry
 	python test.py one_symmetry
@@ -8,7 +8,3 @@ test: test.py one_symmetry
 
 one_symmetry: one_symmetry.cpp
 	g++ one_symmetry.cpp -o one_symmetry
-
-two_symmetry: two_symmetry.cpp
-	g++ two_symmetry.cpp -o two_symmetry
-

@@ -266,7 +266,7 @@ void sort_candidate_literals()
 }
 
 // find candidate variables by checking whether their positive and negative occurences are the same
-void find_candidates()
+void find_symmetries()
 {
   for (int i = 1; i <= variables; i++)
   {
@@ -492,7 +492,7 @@ int main(int argc, char **argv)
 
   parse();
 
-  find_candidates();
+  find_symmetries();
 
   message("found %d candidates", candidates.size());
 

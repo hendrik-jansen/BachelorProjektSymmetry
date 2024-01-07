@@ -18,7 +18,7 @@
 
 bool variable_sorting = false;
 
-bool unique_symmetry = false;
+bool groups = false;
 
 static int verbosity; // -1=quiet, 0=normal, 1=verbose, INT_MAX=logging
 
@@ -318,15 +318,19 @@ void sort_variables()
   // }
 }
 
-void find_candidates()
+void find_symmetries()
 {
   int checked_pairs = 0;
   for (int i = 0; i < variables; i++)
   {
+    int var1 = sorted_variables[i];
+    std::vector<int> group = {var1};
     for (int j = i + 1; j < variables; j++)
     {
       checked_pairs++;
-      int var1 = sorted_variables[i];
+      if (checked_pairs > 1000000000) {
+        return;
+      }
       int var2 = sorted_variables[j];
       // message("%d: %d, %d:%d", i, var1, j, var2);
       if (matrix[var1].size() != 0 && 
@@ -335,23 +339,25 @@ void find_candidates()
       {
         if (check_symmetry(var1, var2) && check_symmetry(-var1, -var2))
         {
-          symmetries.push_back({var1, var2});
-          if (unique_symmetry) 
+          if (groups) 
           {
-            break;
+            group.push_back(var2);
+            int tmp = sorted_variables[i+1];
+            sorted_variables[i+1] = sorted_variables[j];
+            sorted_variables[j] = tmp;
+            i++;
+          } else {
+            symmetries.push_back({var1, var2});
           }
         }
-        // std::vector<int> candidate = {i, j};
-        // candidates.push_back(candidate);
       }
       else if(variable_sorting)
       {
         break;
       }
-      // if (candidates.size() > 1000000)
-      // {
-      //   break;
-      // }
+    }
+    if (group.size() > 1) {
+      symmetries.push_back(group);
     }
   }
   message("paires checked: %d", checked_pairs);
@@ -413,8 +419,8 @@ int main(int argc, char **argv)
       verbosity = 1;
     else if (!strcmp(arg, "-s") || !strcmp(arg, "--sorting"))
       variable_sorting = true;
-    else if (!strcmp(arg, "-u") || !strcmp(arg, "--unique"))
-      unique_symmetry = true;
+    else if (!strcmp(arg, "-g") || !strcmp(arg, "--groups"))
+      groups = true;
     else if (arg[0] == '-')
       die("invalid option '%s' (try '-h')", arg);
     else if (file_name)
@@ -443,7 +449,7 @@ int main(int argc, char **argv)
     sort_variables();
   }
 
-  find_candidates();
+  find_symmetries();
 
   group_symmetries();
 
@@ -452,11 +458,22 @@ int main(int argc, char **argv)
   // find_symmetries();
 
   message("found %d symmetries", symmetries.size());
-
-  // for (auto sym : symmetries)
-  // {
-  //   message("found symmetry on %d and %d", sym[0], sym[1]);
-  // }
+  for (auto sym : symmetries)
+  {
+    if (groups) 
+    {
+      printf("found symmetry group: ");
+      for (auto var : sym) 
+      {
+        printf("%d ", var);
+      }
+      printf("\n");
+    }
+    else
+    {
+      printf("-%d %d 0\n", sym[0], sym[1]);
+    }
+  }
 
   release();
 }

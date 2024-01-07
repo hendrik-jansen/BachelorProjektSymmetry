@@ -1,7 +1,7 @@
-all: one_symmetry
+all: two_symmetry
 
 two_symmetry: two_symmetry.cpp
-	g++ two_symmetry.cpp -o two_symmetry
+	g++ -W -Wall -O3 two_symmetry.cpp -o two_symmetry
 
 test: test.py two_symmetry
 	python test.py two_symmetry
