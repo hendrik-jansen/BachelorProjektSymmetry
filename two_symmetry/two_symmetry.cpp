@@ -20,6 +20,8 @@ bool variable_sorting = false;
 
 bool groups = false;
 
+bool breaking_clauses = false;
+
 static int verbosity; // -1=quiet, 0=normal, 1=verbose, INT_MAX=logging
 
 static int variables; // Variable range: 1,..,<variables>
@@ -226,8 +228,6 @@ static void parse(void)
     }
     else
     {
-      // std::sort(clause.begin(), clause.end(), [](int i, int j)
-      //           { return abs(i) < abs(j); });
       add_clause(clause);
       clause.clear();
       parsed++;
@@ -312,10 +312,6 @@ void sort_variables()
             { return matrix[i].size() < matrix[j].size() || 
                     (matrix[i].size() == matrix[j].size() && 
                      matrix[-i].size() < matrix[-j].size()); });
-
-  // for(int i = 0; i < variables; i++){
-  //   message("%d: %d", i, sorted_variables[i]);
-  // }
 }
 
 void find_symmetries()
@@ -328,11 +324,7 @@ void find_symmetries()
     for (int j = i + 1; j < variables; j++)
     {
       checked_pairs++;
-      if (checked_pairs > 1000000000) {
-        return;
-      }
       int var2 = sorted_variables[j];
-      // message("%d: %d, %d:%d", i, var1, j, var2);
       if (matrix[var1].size() != 0 && 
           matrix[var1].size() == matrix[var2].size() && 
           matrix[-var1].size() == matrix[-var2].size())
@@ -360,30 +352,7 @@ void find_symmetries()
       symmetries.push_back(group);
     }
   }
-  message("paires checked: %d", checked_pairs);
 }
-
-void group_symmetries() {
-  for(int i = 0; i < symmetries.size(); i++) {
-    for (int j = i + 1; j < symmetries.size(); j++) {
-      if (symmetries[i][1] == symmetries[j][0])
-      {
-
-      }
-    }
-  }
-}
-
-// void find_symmetries()
-// {
-//   for (int i = 0; i < candidates.size(); i++)
-//   {
-//     if (check_symmetry(candidates[i][0], candidates[i][1]) && check_symmetry(-candidates[i][0], -candidates[i][1]))
-//     {
-//       symmetries.push_back(candidates[i]);
-//     }
-//   }
-// }
 
 static void delete_clause(Clause *c)
 {
@@ -421,6 +390,8 @@ int main(int argc, char **argv)
       variable_sorting = true;
     else if (!strcmp(arg, "-g") || !strcmp(arg, "--groups"))
       groups = true;
+    else if (!strcmp(arg, "-b") || !strcmp(arg, "--breaking-clauses"))
+      breaking_clauses = true;
     else if (arg[0] == '-')
       die("invalid option '%s' (try '-h')", arg);
     else if (file_name)
@@ -451,27 +422,35 @@ int main(int argc, char **argv)
 
   find_symmetries();
 
-  group_symmetries();
-
-  // message("found %d candidates", candidates.size());
-
-  // find_symmetries();
-
-  message("found %d symmetries", symmetries.size());
+  int n_sym = 0;
   for (auto sym : symmetries)
   {
-    if (groups) 
+    n_sym += sym.size() * (sym.size() - 1) / 2;
+  }
+  message("symmetries found: %d", n_sym);
+
+  if (groups)
+  {
+    message("groups found: %d", symmetries.size());
+  }
+
+  for (auto sym : symmetries)
+  {
+    if (!breaking_clauses) 
     {
-      printf("found symmetry group: ");
+      printf("found symmetry: ");
       for (auto var : sym) 
       {
         printf("%d ", var);
       }
       printf("\n");
     }
-    else
+    if (breaking_clauses)
     {
-      printf("-%d %d 0\n", sym[0], sym[1]);
+      for(int i = 0; i < sym.size() - 1; i++)
+      {
+        printf("-%d %d 0 \n", sym[i], sym[i+1]);
+      }
     }
   }
 
